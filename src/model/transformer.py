@@ -101,6 +101,25 @@ def get_masks(slen, lengths, causal):
     return mask, attn_mask
 
 
+def correlate(x, y):
+    """column-wise Pearson correlation
+    """
+    # Ensure zero-mean
+    x = x - x.mean(0)
+    y = y - y.mean(0)
+
+    # compute pearson R
+    Sx2 = (x ** 2).sum(0) ** .5
+    Sy2 = (y ** 2).sum(0) ** .5
+    Sxy = (x * y).sum(0)
+    return Sxy / (Sx2 * Sy2)
+
+
+def corr_loss(x, y):
+    r = correlate(x, y)
+    return -torch.tan(r * np.pi / 2.001)
+
+
 class PredLayer(nn.Module):
     """
     Prediction layer (cross_entropy or adaptive_softmax).
@@ -325,7 +344,6 @@ class PredTransformerModel(TransformerModel):
             if ('%i_after' % i) in self.memories:
                 tensor = tensor + self.memories['%i_after' % i](tensor)
             # TODO: add extra layer norm here?
-
             tensor *= mask.unsqueeze(-1).to(tensor.dtype)
 
             tensors.append(tensor)
